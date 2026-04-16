@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recruiter View - Proof of Skill</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .search-bar { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        .search-bar input { flex: 1; }
+    </style>
+</head>
+<body>
+    <nav class="navbar glass">
+        <a href="index.html" class="logo">ProofOfSkill</a>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="glass" style="padding: 2rem;">
+            <h2>Verify Candidate Skills</h2>
+            <p style="color:var(--text-muted); margin-bottom: 1.5rem;">Enter a candidate's blockchain wallet address to view their Soulbound NFT credentials.</p>
+            
+            <form id="searchForm" class="search-bar">
+                <input type="text" id="walletSearch" placeholder="0x..." required>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+            <div id="searchMsg" style="color: var(--secondary);"></div>
+        </div>
+
+        <div id="resultsSection" style="display:none; margin-top:2rem;">
+            <h3>Verified Skills</h3>
+            <div class="grid" id="skillsGrid"></div>
+            
+            <h3 style="margin-top:2rem;">Submitted Work History</h3>
+            <div class="grid" id="historyGrid"></div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const address = document.getElementById('walletSearch').value;
+            const msgEl = document.getElementById('searchMsg');
+            const resultsSection = document.getElementById('resultsSection');
+            const skillsGrid = document.getElementById('skillsGrid');
+            const historyGrid = document.getElementById('historyGrid');
+            
+            msgEl.innerText = "Searching...";
+            resultsSection.style.display = 'none';
+            skillsGrid.innerHTML = '';
+            historyGrid.innerHTML = '';
+
+            try {
+                const res = await fetch(`${API_URL}/user/${address}`);
+                if (!res.ok) {
+                    msgEl.innerText = "Candidate not found or invalid address.";
+                    return;
+                }
+                const data = await res.json();
+                msgEl.innerText = `Candidate found! Reputation Score: ${data.reputation || 0}`;
+                resultsSection.style.display = 'block';
+
+                if(data.projects && data.projects.length > 0) {
+                    data.projects.forEach(p => {
+                        let badgeClass = 'badge-pending';
+                        if(p.status === 'approved') badgeClass = 'badge-approved';
+                        if(p.status === 'rejected') badgeClass = 'badge-rejected';
+
+                        const html = `
+                            <div class="card glass">
+                                <h3>${p.title}</h3>
+                                <p>Category: ${p.skill_category}</p>
+                                <span class="badge ${badgeClass}">${p.status}</span>
+                                <p style="margin-top: 1rem;"><small>Hash: ${p.ipfs_hash.substring(0, 15)}...</small></p>
+                            </div>
+                        `;
+                        
+                        historyGrid.innerHTML += html;
+
+                        if(p.status === 'approved') {
+                            skillsGrid.innerHTML += `
+                                <div class="card glass" style="border-color: var(--secondary);">
+                                    <h3 style="color:var(--secondary)">🏆 ${p.skill_category}</h3>
+                                    <p>Verified with ProofOfSkill NFT</p>
+                                    <p style="margin-top:1rem;"><small>Project: ${p.title}</small></p>
+                                </div>
+                            `;
+                        }
+                    });
+                    if(skillsGrid.innerHTML === '') skillsGrid.innerHTML = '<p>No verified skills yet.</p>';
+                } else {
+                    historyGrid.innerHTML = '<p>No history found.</p>';
+                    skillsGrid.innerHTML = '<p>No verified skills yet.</p>';
+                }
+            } catch(err) {
+                console.error(err);
+                msgEl.innerText = "Server error while searching.";
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Dependency directories
+node_modules/
+backend/__pycache__/
+.venv/
+
+# Database
+backend/*.db
+
+# Hardhat/Foundry/Truffle
+artifacts/
+cache/
+typechain/
+typechain-types/
+
+# Environment variables
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
