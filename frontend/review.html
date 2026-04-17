@@ -22,49 +22,71 @@
         <h2>Pending Submissions</h2>
         <p style="color:var(--text-muted); margin-bottom: 2rem;">Review work from your peers. Honest and accurate reviews maintain your reputation score.</p>
         
-        <div class="grid" id="pendingGrid">
+        <div class="list-view" id="pendingList">
             <!-- Populated via JS -->
         </div>
     </div>
 
-    <!-- Review Modal Overlay (hidden by default) -->
+    <!-- Detail Modal Overlay -->
     <div id="reviewModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
-        <div class="glass" style="max-width: 500px; width:100%; padding: 2rem; position:relative;">
-            <button id="closeModal" style="position:absolute; top:1rem; right:1rem; background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
-            <h3 id="modalTitle">Review Project</h3>
-            <form id="reviewForm" style="margin-top: 1.5rem;">
+        <div class="glass" style="max-width: 800px; width:100%; max-height: 90vh; overflow-y: auto; padding: 3rem; position:relative;">
+            <button id="closeModal" style="position:absolute; top:1.5rem; right:1.5rem; background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+            
+            <div id="projectDetailHeader">
+                <h2 id="modalTitle" style="margin-bottom: 0.5rem;">Project Title</h2>
+                <p id="modalAuthor" class="mono" style="color: var(--secondary); margin-bottom: 1.5rem;">Author</p>
+            </div>
+
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                <div>
+                    <h4 style="margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.8rem; color: var(--text-dim);">Description</h4>
+                    <p id="modalDescription" style="line-height: 1.6; color: var(--text-main); font-size: 1.05rem;"></p>
+                </div>
+                <div class="glass" style="padding: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem; text-transform: uppercase; font-size: 0.8rem; color: var(--text-dim);">Metadata</h4>
+                    <div class="data-row">
+                        <span class="data-label">IPFS Hash</span>
+                        <span class="data-value" id="modalIpfs" style="font-size: 0.75rem;">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border-light); margin: 2rem 0;">
+
+            <h3 style="margin-bottom: 1.5rem;">Peer Review Verification</h3>
+            <form id="reviewForm">
                 <input type="hidden" id="modalProjectId">
-                
-                <div class="form-group">
-                    <label for="score">Score Out of 5</label>
-                    <input type="number" id="score" min="1" max="5" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Are all listed skills legitimate/verified?</label>
-                    <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input type="radio" name="allSkillsVerified" value="yes" checked onclick="toggleSkillSelection(true)"> Yes
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input type="radio" name="allSkillsVerified" value="no" onclick="toggleSkillSelection(false)"> No
-                        </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div>
+                        <div class="form-group">
+                            <label for="score">Technical Score (1-5)</label>
+                            <input type="number" id="score" min="1" max="5" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Are all listed skills legitimate?</label>
+                            <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="radio" name="allSkillsVerified" value="yes" checked onclick="toggleSkillSelection(true)"> Yes
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="radio" name="allSkillsVerified" value="no" onclick="toggleSkillSelection(false)"> No
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group" id="manualSkillGroup" style="display: none;">
+                            <label>Verify Skills Individually</label>
+                            <div id="skillsCheckboxContainer" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="feedback">Verification Details / Feedback</label>
+                            <textarea id="feedback" rows="4" required placeholder="Explain your verification process..."></textarea>
+                        </div>
                     </div>
                 </div>
-
-                <div class="form-group" id="manualSkillGroup" style="display: none;">
-                    <label>Select Verified Skills</label>
-                    <div id="skillsCheckboxContainer" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                        <!-- Checkboxes will appear here -->
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="feedback">Feedback</label>
-                    <textarea id="feedback" rows="3" required></textarea>
-                </div>
                 
-                <button type="submit" class="btn btn-primary" style="width:100%;">Submit Review</button>
+                <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 1rem;">Finalize & Submit Review</button>
             </form>
             <div id="reviewMsg" style="margin-top: 1rem; text-align: center; color: var(--secondary);"></div>
         </div>
@@ -79,29 +101,30 @@
             try {
                 const res = await fetch(`${API_URL}/projects?status=pending`);
                 const data = await res.json();
-                const grid = document.getElementById('pendingGrid');
-                grid.innerHTML = '';
+                const list = document.getElementById('pendingList');
+                list.innerHTML = '';
                 
                 if(data.projects && data.projects.length > 0) {
                     data.projects.forEach(p => {
-                        // Users shouldn't review their own project
                         if (p.user_id !== userWalletAddress) {
                             const skillsList = p.skills || [p.skill_category];
-                            const skillsHtml = skillsList.map(s => `<span class="badge badge-pending" style="margin-right:5px;">${s}</span>`).join('');
+                            const skillsHtml = skillsList.map(s => `<span class="badge badge-pending" style="margin-right:5px; font-size:0.7rem;">${s}</span>`).join('');
                             
-                            grid.innerHTML += `
-                                <div class="card glass">
-                                    <h3>${p.title}</h3>
-                                    <div style="margin-bottom: 0.5rem;">${skillsHtml}</div>
-                                    <p style="margin: 0.5rem 0;">${p.description}</p>
-                                    <button class="btn btn-secondary w-100 mt-2" onclick="openReviewModal(${p.id}, '${p.title}', ${JSON.stringify(skillsList).replace(/"/g, '&quot;')})">Review</button>
-                                </div>
+                            const row = document.createElement('div');
+                            row.className = 'glass list-item';
+                            row.onclick = () => openReviewModal(p);
+                            row.innerHTML = `
+                                <div class="title">${p.title}</div>
+                                <div class="author mono">${p.author_name || p.user_id.substring(0, 10)}... <span style="color:var(--text-dim)">(Rep: ${p.author_rep})</span></div>
+                                <div class="skills">${skillsHtml}</div>
+                                <div style="text-align: right;"><button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">View Details</button></div>
                             `;
+                            list.appendChild(row);
                         }
                     });
-                    if(grid.innerHTML === '') grid.innerHTML = '<p>No eligible pending projects to review.</p>';
+                    if(list.innerHTML === '') list.innerHTML = '<p>No eligible pending projects to review.</p>';
                 } else {
-                    grid.innerHTML = '<p>No pending projects found.</p>';
+                    list.innerHTML = '<p>No pending projects found.</p>';
                 }
             } catch(e) {
                 console.error(e);
@@ -117,16 +140,23 @@
             manualSkillGroup.style.display = allVerified ? 'none' : 'block';
         };
 
-        function openReviewModal(id, title, skills) {
+        function openReviewModal(project) {
             if(!userWalletAddress) {
                 alert("Please connect wallet first.");
                 return;
             }
-            document.getElementById('modalProjectId').value = id;
-            document.getElementById('modalTitle').innerText = `Review: ${title}`;
+            document.getElementById('modalProjectId').value = project.id;
+            document.getElementById('modalTitle').innerText = project.title;
+            document.getElementById('modalAuthor').innerText = `Maintained by: ${project.author_name || project.user_id} (Reputation: ${project.author_rep})`;
+            document.getElementById('modalDescription').innerText = project.description;
+            document.getElementById('modalIpfs').innerText = project.ipfs_hash;
+            
+            const skills = project.skills || [project.skill_category];
             currentProjectSkills = skills;
             
-            // Reset to "Yes" by default
+            // Reset form
+            document.getElementById('score').value = '';
+            document.getElementById('feedback').value = '';
             document.querySelector('input[name="allSkillsVerified"][value="yes"]').checked = true;
             toggleSkillSelection(true);
 

@@ -236,6 +236,46 @@ h1, h2, h3, h4 {
   margin-bottom: 1rem;
 }
 
+/* List View Styles */
+.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.list-item {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr 120px;
+  align-items: center;
+  padding: 1.25rem 2rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.list-item:hover {
+  background: rgba(99, 102, 241, 0.05);
+  border-color: var(--primary);
+  transform: translateX(8px);
+}
+
+.list-item .title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.list-item .author {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.list-item .skills {
+  display: flex;
+  gap: 0.5rem;
+  overflow: hidden;
+}
+
 /* Form Styles */
 .form-group {
   margin-bottom: 2rem;

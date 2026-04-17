@@ -77,13 +77,20 @@ def get_projects():
     conn = get_db_connection()
     c = conn.cursor()
     
-    query = "SELECT * FROM projects WHERE 1=1"
+    # Enhanced query to get author details and reputation
+    query = """
+        SELECT p.*, u.username as author_name, r.score as author_rep
+        FROM projects p
+        JOIN users u ON p.user_id = u.wallet_address
+        LEFT JOIN reputation r ON p.user_id = r.user_id
+        WHERE 1=1
+    """
     params = []
     if status:
-        query += " AND status = ?"
+        query += " AND p.status = ?"
         params.append(status)
     if user_id:
-        query += " AND user_id = ?"
+        query += " AND p.user_id = ?"
         params.append(user_id)
         
     c.execute(query, tuple(params))
@@ -95,6 +102,10 @@ def get_projects():
             p['skills'] = json.loads(p['skill_category'])
         except:
             p['skills'] = [p['skill_category']]
+        
+        # Default rep if NULL
+        if p.get('author_rep') is None:
+            p['author_rep'] = 0
             
     conn.close()
     
