@@ -42,9 +42,12 @@ def submit_project():
     skill_category = data.get('skill_category')
     user_id = data.get('user_id')
     
-    if not all([title, description, skill_category, user_id]):
-        return jsonify({"error": "Missing required fields"}), 400
-        
+    # Normalize skill_category: if list, store as JSON; if string, make it a list then JSON
+    if isinstance(skill_category, list):
+        skills_json = json.dumps(skill_category)
+    else:
+        skills_json = json.dumps([s.strip() for s in skill_category.split(',') if s.strip()])
+    
     # Upload to mock IPFS
     ipfs_data = {
         "title": title,
@@ -58,7 +61,7 @@ def submit_project():
     c = conn.cursor()
     c.execute(
         "INSERT INTO projects (title, description, ipfs_hash, user_id, skill_category) VALUES (?, ?, ?, ?, ?)",
-        (title, description, ipfs_hash, user_id, skill_category)
+        (title, description, ipfs_hash, user_id, skills_json)
     )
     conn.commit()
     project_id = c.lastrowid
@@ -85,6 +88,14 @@ def get_projects():
         
     c.execute(query, tuple(params))
     projects = [dict(row) for row in c.fetchall()]
+    
+    import json
+    for p in projects:
+        try:
+            p['skills'] = json.loads(p['skill_category'])
+        except:
+            p['skills'] = [p['skill_category']]
+            
     conn.close()
     
     return jsonify({"projects": projects})
@@ -94,8 +105,9 @@ def submit_review():
     data = request.json
     project_id = data.get('project_id')
     reviewer_id = data.get('reviewer_id')
-    score = data.get('score')  # 1 to 5
+    score = data.get('score')  
     feedback = data.get('feedback')
+    verified_skills = data.get('verified_skills', []) # List of skills the reviewer checked
     
     if not all([project_id, reviewer_id, score, feedback]):
         return jsonify({"error": "Missing required fields"}), 400
@@ -110,8 +122,8 @@ def submit_review():
         return jsonify({"error": "You have already reviewed this project"}), 400
         
     c.execute(
-        "INSERT INTO reviews (project_id, reviewer_id, score, feedback) VALUES (?, ?, ?, ?)",
-        (project_id, reviewer_id, score, feedback)
+        "INSERT INTO reviews (project_id, reviewer_id, score, feedback, verified_skills) VALUES (?, ?, ?, ?, ?)",
+        (project_id, reviewer_id, score, feedback, json.dumps(verified_skills))
     )
     conn.commit()
     
@@ -153,6 +165,31 @@ def get_user(address):
     c.execute("SELECT * FROM projects WHERE user_id = ?", (address,))
     projects = [dict(row) for row in c.fetchall()]
     
+    # Process project skills and check consensus
+    import json
+    from collections import Counter
+    
+    for p in projects:
+        try:
+            p['skills'] = json.loads(p['skill_category'])
+        except:
+            p['skills'] = [p['skill_category']]
+            
+        if p['status'] == 'approved':
+            # Calculate skills that have > 50% verification consensus
+            c.execute("SELECT verified_skills FROM reviews WHERE project_id = ?", (p['id'],))
+            rev_skills_data = c.fetchall()
+            skill_counts = Counter()
+            for row in rev_skills_data:
+                try:
+                    checked = json.loads(row['verified_skills'])
+                    for s in checked: skill_counts[s] += 1
+                except: pass
+            
+            p['verified_skills'] = [s for s, count in skill_counts.items() if count >= 2]
+        else:
+            p['verified_skills'] = []
+    
     c.execute("SELECT score FROM reputation WHERE user_id = ?", (address,))
     rep = c.fetchone()
     user_data['reputation'] = rep['score'] if rep else 0
@@ -161,5 +198,6 @@ def get_user(address):
     conn.close()
     return jsonify(user_data)
 
+import json
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

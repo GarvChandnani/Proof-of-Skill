@@ -60,12 +60,25 @@
                         if(p.status === 'approved') badgeClass = 'badge-approved';
                         if(p.status === 'rejected') badgeClass = 'badge-rejected';
 
+                        const skillsList = p.verified_skills || [];
+                        const skillsHtml = skillsList.map(s => `<span class="badge badge-approved" style="margin-right:5px; font-size:0.8rem;">${s}</span>`).join('');
+                        const pendingSkills = (p.skills || []).filter(s => !skillsList.includes(s));
+                        const pendingHtml = pendingSkills.map(s => `<span class="badge badge-pending" style="margin-right:5px; font-size:0.8rem; opacity:0.6;">${s}</span>`).join('');
+
                         grid.innerHTML += `
                             <div class="card glass">
                                 <h3>${p.title}</h3>
                                 <span class="badge ${badgeClass}">${p.status}</span>
-                                <p style="margin-top: 1rem;">Skill: ${p.skill_category}</p>
-                                <p>IPFS Hash: <small style="color:var(--text-muted);">${p.ipfs_hash.substring(0, 20)}...</small></p>
+                                <div style="margin-top: 1rem;">
+                                    <p style="font-size:0.9rem; margin-bottom:0.5rem;">Verified Skills:</p>
+                                    ${skillsHtml || '<small style="color:var(--text-muted);">None yet</small>'}
+                                </div>
+                                ${pendingHtml ? `
+                                <div style="margin-top: 0.5rem;">
+                                    <p style="font-size:0.8rem; margin-bottom:0.5rem; color:var(--text-muted);">Unverified:</p>
+                                    ${pendingHtml}
+                                </div>` : ''}
+                                <p style="margin-top: 1rem;">IPFS Hash: <small style="color:var(--text-muted);">${p.ipfs_hash.substring(0, 20)}...</small></p>
                             </div>
                         `;
                     });

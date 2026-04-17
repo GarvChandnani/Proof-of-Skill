@@ -41,6 +41,25 @@
                 </div>
 
                 <div class="form-group">
+                    <label>Are all listed skills legitimate/verified?</label>
+                    <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="allSkillsVerified" value="yes" checked onclick="toggleSkillSelection(true)"> Yes
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="allSkillsVerified" value="no" onclick="toggleSkillSelection(false)"> No
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" id="manualSkillGroup" style="display: none;">
+                    <label>Select Verified Skills</label>
+                    <div id="skillsCheckboxContainer" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- Checkboxes will appear here -->
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label for="feedback">Feedback</label>
                     <textarea id="feedback" rows="3" required></textarea>
                 </div>
@@ -67,12 +86,15 @@
                     data.projects.forEach(p => {
                         // Users shouldn't review their own project
                         if (p.user_id !== userWalletAddress) {
+                            const skillsList = p.skills || [p.skill_category];
+                            const skillsHtml = skillsList.map(s => `<span class="badge badge-pending" style="margin-right:5px;">${s}</span>`).join('');
+                            
                             grid.innerHTML += `
                                 <div class="card glass">
                                     <h3>${p.title}</h3>
-                                    <p>Skill: ${p.skill_category}</p>
+                                    <div style="margin-bottom: 0.5rem;">${skillsHtml}</div>
                                     <p style="margin: 0.5rem 0;">${p.description}</p>
-                                    <button class="btn btn-secondary w-100 mt-2" onclick="openReviewModal(${p.id}, '${p.title}')">Review</button>
+                                    <button class="btn btn-secondary w-100 mt-2" onclick="openReviewModal(${p.id}, '${p.title}', ${JSON.stringify(skillsList).replace(/"/g, '&quot;')})">Review</button>
                                 </div>
                             `;
                         }
@@ -87,13 +109,39 @@
         }
 
         const modal = document.getElementById('reviewModal');
-        function openReviewModal(id, title) {
+        const checkboxContainer = document.getElementById('skillsCheckboxContainer');
+        const manualSkillGroup = document.getElementById('manualSkillGroup');
+        let currentProjectSkills = [];
+
+        window.toggleSkillSelection = (allVerified) => {
+            manualSkillGroup.style.display = allVerified ? 'none' : 'block';
+        };
+
+        function openReviewModal(id, title, skills) {
             if(!userWalletAddress) {
                 alert("Please connect wallet first.");
                 return;
             }
             document.getElementById('modalProjectId').value = id;
             document.getElementById('modalTitle').innerText = `Review: ${title}`;
+            currentProjectSkills = skills;
+            
+            // Reset to "Yes" by default
+            document.querySelector('input[name="allSkillsVerified"][value="yes"]').checked = true;
+            toggleSkillSelection(true);
+
+            // Populate checkboxes
+            checkboxContainer.innerHTML = '';
+            skills.forEach(skill => {
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.gap = '10px';
+                label.style.cursor = 'pointer';
+                label.innerHTML = `<input type="checkbox" name="skillCheck" value="${skill}"> ${skill}`;
+                checkboxContainer.appendChild(label);
+            });
+
             modal.style.display = 'flex';
         }
 
@@ -108,6 +156,16 @@
             const feedback = document.getElementById('feedback').value;
             const msgEl = document.getElementById('reviewMsg');
 
+            const allVerified = document.querySelector('input[name="allSkillsVerified"]:checked').value === 'yes';
+            const checkedSkills = allVerified 
+                ? currentProjectSkills 
+                : Array.from(document.querySelectorAll('input[name="skillCheck"]:checked')).map(cb => cb.value);
+
+            if (!allVerified && checkedSkills.length === 0) {
+                alert("Please select at least one verified skill if not all are legitimate.");
+                return;
+            }
+
             msgEl.innerText = "Submitting review...";
 
             try {
@@ -118,7 +176,8 @@
                         project_id, 
                         reviewer_id: userWalletAddress,
                         score: parseInt(score),
-                        feedback
+                        feedback,
+                        verified_skills: checkedSkills
                     })
                 });
                 

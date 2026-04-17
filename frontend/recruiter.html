@@ -70,23 +70,31 @@
                         if(p.status === 'approved') badgeClass = 'badge-approved';
                         if(p.status === 'rejected') badgeClass = 'badge-rejected';
 
-                        const html = `
+                        const skillsList = p.verified_skills || [];
+                        const skillsHtml = skillsList.map(s => `<span class="badge badge-approved" style="margin-right:5px; margin-bottom: 5px;">${s}</span>`).join('');
+                        const unverifiedList = (p.skills || []).filter(s => !skillsList.includes(s));
+                        const unverifiedHtml = unverifiedList.map(s => `<span class="badge badge-pending" style="margin-right:5px; margin-bottom: 5px; opacity: 0.6;">${s}</span>`).join('');
+
+                        const historyHtml = `
                             <div class="card glass">
                                 <h3>${p.title}</h3>
-                                <p>Category: ${p.skill_category}</p>
                                 <span class="badge ${badgeClass}">${p.status}</span>
+                                <div style="margin-top: 1rem;">
+                                    <strong>Skills attempted:</strong><br>
+                                    ${(p.skills || []).join(', ')}
+                                </div>
                                 <p style="margin-top: 1rem;"><small>Hash: ${p.ipfs_hash.substring(0, 15)}...</small></p>
                             </div>
                         `;
                         
-                        historyGrid.innerHTML += html;
+                        historyGrid.innerHTML += historyHtml;
 
-                        if(p.status === 'approved') {
+                        if(skillsHtml) {
                             skillsGrid.innerHTML += `
                                 <div class="card glass" style="border-color: var(--secondary);">
-                                    <h3 style="color:var(--secondary)">🏆 ${p.skill_category}</h3>
-                                    <p>Verified with ProofOfSkill NFT</p>
-                                    <p style="margin-top:1rem;"><small>Project: ${p.title}</small></p>
+                                    <h3 style="color:var(--secondary)">🏆 Verified Skills</h3>
+                                    <div style="margin: 1rem 0;">${skillsHtml}</div>
+                                    <p><small>Project: ${p.title}</small></p>
                                 </div>
                             `;
                         }

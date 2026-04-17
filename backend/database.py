@@ -43,6 +43,7 @@ def init_db():
             reviewer_id TEXT NOT NULL,
             score INTEGER NOT NULL,
             feedback TEXT NOT NULL,
+            verified_skills TEXT DEFAULT '[]',
             FOREIGN KEY (project_id) REFERENCES projects (id),
             FOREIGN KEY (reviewer_id) REFERENCES users (wallet_address),
             UNIQUE(project_id, reviewer_id)

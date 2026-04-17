@@ -30,14 +30,14 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="skill_category">Skill Category</label>
-                    <select id="skill_category" required>
-                        <option value="">Select a skill</option>
-                        <option value="Solidity Development">Solidity Development</option>
-                        <option value="Frontend UI/UX">Frontend UI/UX</option>
-                        <option value="Backend Python Architecture">Backend Python Architecture</option>
-                        <option value="Full Stack Web3">Full Stack Web3</option>
-                    </select>
+                    <label>Skill Categories (Add Multiple)</label>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <input type="text" id="skillInput" placeholder="Enter a skill (e.g. Solidity)">
+                        <button type="button" id="addSkillBtn" class="btn btn-secondary">Add</button>
+                    </div>
+                    <div id="skillsTagContainer" style="display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 20px;">
+                        <!-- Tags will appear here -->
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -54,6 +54,46 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <script src="js/app.js"></script>
     <script>
+        const addedSkills = [];
+        const skillInput = document.getElementById('skillInput');
+        const addSkillBtn = document.getElementById('addSkillBtn');
+        const tagContainer = document.getElementById('skillsTagContainer');
+
+        function updateTags() {
+            tagContainer.innerHTML = '';
+            addedSkills.forEach((skill, index) => {
+                const tag = document.createElement('span');
+                tag.className = 'badge badge-pending';
+                tag.style.display = 'flex';
+                tag.style.alignItems = 'center';
+                tag.style.gap = '5px';
+                tag.innerHTML = `${skill} <span style="cursor:pointer; font-weight:bold;" onclick="removeSkill(${index})">&times;</span>`;
+                tagContainer.appendChild(tag);
+            });
+        }
+
+        function addSkill() {
+            const val = skillInput.value.trim();
+            if(val && !addedSkills.includes(val)) {
+                addedSkills.push(val);
+                skillInput.value = '';
+                updateTags();
+            }
+        }
+
+        addSkillBtn.addEventListener('click', addSkill);
+        skillInput.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') {
+                e.preventDefault();
+                addSkill();
+            }
+        });
+
+        window.removeSkill = (index) => {
+            addedSkills.splice(index, 1);
+            updateTags();
+        };
+
         document.getElementById('submitForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             if(!userWalletAddress) {
@@ -61,8 +101,12 @@
                 return;
             }
 
+            if(addedSkills.length === 0) {
+                alert("Please add at least one skill.");
+                return;
+            }
+
             const title = document.getElementById('title').value;
-            const skill_category = document.getElementById('skill_category').value;
             const description = document.getElementById('description').value;
             const msgEl = document.getElementById('submitMsg');
             
@@ -73,7 +117,10 @@
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        title, skill_category, description, user_id: userWalletAddress
+                        title, 
+                        skill_category: addedSkills, 
+                        description, 
+                        user_id: userWalletAddress
                     })
                 });
                 
@@ -81,6 +128,8 @@
                 if(data.success) {
                     msgEl.innerText = `Submitted successfully! Simulated IPFS Hash: ${data.ipfs_hash}`;
                     document.getElementById('submitForm').reset();
+                    addedSkills.length = 0;
+                    updateTags();
                 } else {
                     msgEl.innerText = "Error: " + data.error;
                 }
